@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#1a56db" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Protocolos" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon.png" />
+  <title>Protocolos de Enfermagem</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { margin: 0; padding: 0; background: #f0f4f8; font-family: 'DM Sans', sans-serif; }
+    #root { max-width: 430px; margin: 0 auto; min-height: 100vh; }
+    input, textarea, button { font-family: 'DM Sans', sans-serif; }
+    textarea { resize: vertical; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .fade-in { animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ─── DADOS INICIAIS ──────────────────────────────────────────────
+const SEED = [
+  {
+    id:"1", categoria:"Pré-natal", titulo:"Abertura de Pré-natal", icone:"🤰",
+    protocolo:`## Abertura de Pré-natal
+
+### 1. Anamnese Essencial
+- Data da última menstruação (DUM) e cálculo da DPP
+- Gestações anteriores (G), partos (P), abortos (A), filhos vivos (FV)
+- Doenças pré-existentes (HAS, DM, cardiopatias, etc.)
+- Medicamentos em uso / Alergias
+- Situação vacinal
+
+### 2. Exame Físico
+- Peso, altura e IMC
+- Pressão arterial e frequência cardíaca
+- Altura uterina (a partir de 12 semanas)
+- Ausculta de BCF (a partir de 12 semanas com sonar)
+
+### 3. Exames – 1º Trimestre
+- Hemograma completo
+- Tipagem sanguínea e fator Rh
+- Glicemia de jejum
+- VDRL, Anti-HIV
+- Toxoplasmose (IgG e IgM) / Rubéola (IgG e IgM)
+- Hepatite B (HBsAg) / Hepatite C (Anti-HCV)
+- EAS + urocultura
+- Ultrassonografia obstétrica (8–12 semanas)
+
+### 4. Orientações
+- Ácido fólico 5mg/dia (até 12ª semana)
+- Sulfato ferroso 40mg/dia (a partir de 20ª semana)
+- Caderneta da gestante / SISPRENATAL
+- Calendário vacinal: dTpa, influenza, hepatite B
+
+> **Atenção:** Fatores de risco → encaminhar pré-natal de alto risco.`
+  },
+  {
+    id:"2", categoria:"Pré-natal", titulo:"Consulta de Retorno Pré-natal", icone:"📋",
+    protocolo:`## Consulta de Retorno Pré-natal
+
+### 1. Avaliação
+- Verificar exames da consulta anterior
+- Queixas / intercorrências
+- Movimentação fetal (a partir de 18–20 semanas)
+- Adesão às medicações
+
+### 2. Exame Físico
+- Peso e ganho ponderal
+- Pressão arterial
+- Altura uterina (curva no cartão)
+- Ausculta de BCF / Edema / Apresentação fetal (≥ 36 sem)
+
+### 3. Sinais de Alerta – Encaminhar Imediatamente
+- Cefaleia intensa + PA elevada
+- Edema súbito / Sangramento vaginal
+- Diminuição ou ausência de movimentos fetais
+- Contrações antes de 37 semanas
+
+> Mínimo 6 consultas: mensais até 28 sem, quinzenais até 36 sem, semanais até o parto.`
+  },
+  {
+    id:"3", categoria:"Puericultura", titulo:"Consulta da Criança (0–2 anos)", icone:"👶",
+    protocolo:`## Consulta da Criança (0–2 anos)
+
+### 1. Anamnese
+- Tipo de parto / intercorrências neonatais
+- Aleitamento materno (exclusivo até 6 meses)
+- Introdução alimentar / Sono / Desenvolvimento
+
+### 2. Exame Físico
+- Peso, comprimento/estatura e PC – plotar curvas OMS
+- Fontanelas, reflexos e tônus
+- Ausculta cardiopulmonar
+
+### 3. Triagens Obrigatórias
+- Teste do Pezinho (até 5º dia)
+- Teste da Orelhinha – OAE (até 1 mês)
+- Teste do Olhinho – reflexo vermelho (maternidade)
+- Teste do Coraçãozinho – oximetria (maternidade)
+
+### 4. Orientações
+- Vitamina D 400UI/dia até 1 ano
+- Conferir e atualizar cartão vacinal (PNI vigente)
+- Estimulação e segurança
+
+> Consultas: 7 dias, 1, 2, 4, 6, 9, 12, 18 e 24 meses.`
+  },
+  {
+    id:"4", categoria:"Doenças Crônicas", titulo:"Consulta de Hipertensão Arterial", icone:"💓",
+    protocolo:`## Consulta de Hipertensão Arterial
+
+### 1. Anamnese
+- Adesão ao tratamento / Medição domiciliar (MRPA/MAPA)
+- Sintomas: cefaleia, tonteira, visão turva, dor torácica
+- Fatores de risco cardiovascular / Tabagismo e etilismo
+
+### 2. Exame Físico
+- PA (ambos os braços na 1ª consulta) / FC
+- Peso, IMC e circunferência abdominal
+- Ausculta cardiopulmonar / Edema / Pulsos
+
+### 3. Metas de PA
+- Geral: < 130/80 mmHg
+- Idosos (≥ 65 anos): < 140/90 mmHg
+- DRC / DM: < 130/80 mmHg
+
+### 4. Exames Anuais
+- Glicemia de jejum, HbA1c, Lipidograma
+- Creatinina + TFG, EAS, ECG
+- Potássio (se uso de diurético/IECA/BRA)
+
+### 5. Encaminhamento
+- PA resistente (≥ 3 medicamentos + diurético)
+- HAS secundária / Lesão de órgão-alvo
+
+> **Crise Hipertensiva:** PAS ≥ 180 ou PAD ≥ 120 mmHg — acionar médico imediatamente.`
+  },
+  {
+    id:"5", categoria:"Doenças Crônicas", titulo:"Consulta de Diabetes Mellitus", icone:"🩸",
+    protocolo:`## Consulta de Diabetes Mellitus
+
+### 1. Anamnese
+- Tipo de DM / Medicamentos (insulina: tipo, dose, horários)
+- Monitorização glicêmica domiciliar
+- Hipoglicemias: frequência, horário, sintomas
+- Dieta e atividade física
+
+### 2. Exame Físico
+- Peso, IMC e circunferência abdominal / PA
+- Exame dos pés: pulsos, sensibilidade, pele, unhas
+- Locais de aplicação de insulina
+
+### 3. Metas Glicêmicas (SBD 2023)
+- Jejum: 80–130 mg/dL
+- Pós-prandial (2h): < 180 mg/dL
+- HbA1c: < 7% (individualizar)
+
+### 4. Exames Periódicos
+- HbA1c: 3–6 meses
+- Microalbuminúria + creatinina, Lipidograma, ECG, FO: anual
+
+### 5. Pé Diabético
+- Monofilamento 10g
+- Pulsos tibial posterior e pediosa
+
+> **Hipoglicemia:** < 70 mg/dL — 15g carboidrato simples + repetir glicemia em 15 min.`
+  },
+  {
+    id:"6", categoria:"Imunização", titulo:"Sala de Vacinas", icone:"💉",
+    protocolo:`## Sala de Vacinas
+
+### 1. Antes
+- Verificar cartão / pendências
+- Anamnese rápida: febre, doença aguda, alergias, imunossupressão
+- Validade, lote e temperatura da câmara fria (2–8°C)
+
+### 2. Administração
+- Via correta: IM, SC, ID, VO
+- IM: vasto lateral da coxa (< 2 anos), deltoide (≥ 2 anos)
+- Técnica asséptica / Não aspirar
+
+### 3. Pós-Vacinação
+- Observar 15–20 min (risco de anafilaxia)
+- Registrar: data, lote, fabricante, validade, local
+- SIPNI / RNDS + cartão do paciente
+
+### 4. Reações
+- Local: compressa fria, analgésico
+- Febre: antitérmico conforme peso
+- Anafilaxia: supino + adrenalina 1:1000 IM 0,01mg/kg + SAMU
+
+> Nunca congelar vacinas 2–8°C. Congeladas acidentalmente → descartar.`
+  }
+];
+
+const ICONES = ["🤰","📋","👶","📏","💓","🩸","🧠","🚨","💉","🔬","👩‍⚕️","🩹","🫁","🦷","👁️","🦴","💊","🩺","📊","🧪","🫀","🧬","🩻","🏥","📌","🗂️","⚕️","🔴","🟡","🟢"];
+const CORES = {"Pré-natal":"#4CAF50","Puericultura":"#2196F3","Doenças Crônicas":"#FF9800","Saúde Mental":"#9C27B0","Urgência":"#F44336","Imunização":"#00BCD4","Saúde da Mulher":"#E91E63","Procedimentos":"#8BC34A","Saúde do Adulto":"#FF5722","Saúde do Idoso":"#795548"};
+const getCor = c => CORES[c] || "#607D8B";
+const getBg  = c => getCor(c) + "18";
+const uid    = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+const KEY    = "enf_protocolos_v1";
+const GRAD   = "linear-gradient(150deg,#0a2540 0%,#1a56db 100%)";
+
+// ─── MARKDOWN ────────────────────────────────────────────────────
+function renderMd(text) {
+  if (!text) return "";
+  return text
+    .replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g,"<em>$1</em>")
+    .replace(/^### (.+)$/gm,'<h3 style="font-size:13px;font-weight:700;color:#1a365d;margin:16px 0 6px;padding-bottom:4px;border-bottom:1px solid #e2e8f0">$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2 style="font-size:16px;font-weight:800;color:#0a2540;margin:0 0 14px">$1</h2>')
+    .replace(/^[-•] (.+)$/gm,'<div style="display:flex;gap:8px;margin:5px 0;font-size:13px"><span style="color:#1a56db;font-size:18px;line-height:1.1;flex-shrink:0">›</span><span>$1</span></div>')
+    .replace(/^> \*\*(.+?)\*\*(.*)$/gm,'<div style="border-left:3px solid #f59e0b;padding:8px 12px;background:#fffbeb;border-radius:0 8px 8px 0;margin:10px 0;font-size:12px;color:#92400e"><strong>⚠️ $1</strong>$2</div>')
+    .replace(/^> (.+)$/gm,  '<div style="border-left:3px solid #f59e0b;padding:8px 12px;background:#fffbeb;border-radius:0 8px 8px 0;margin:10px 0;font-size:12px;color:#92400e">⚠️ $1</div>')
+    .replace(/\n\n/g,"<br/><br/>").replace(/\n/g,"<br/>");
+}
+
+// ─── MINI COMPONENTES ─────────────────────────────────────────────
+const Label = ({children}) => <div style={{fontSize:11,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:1.5}}>{children}</div>;
+
+const Chip = ({ativo,onClick,children}) => (
+  <button onClick={onClick} style={{background:ativo?"#fff":"rgba(255,255,255,0.12)",color:ativo?"#1a56db":"#fff",border:"none",borderRadius:20,padding:"6px 14px",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>
+    {children}
+  </button>
+);
+
+const Voltar = ({onClick}) => (
+  <button onClick={onClick} style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:10,padding:"8px 12px",cursor:"pointer",color:"#fff",fontSize:18,fontWeight:600,lineHeight:1}}>‹</button>
+);
+
+const Toast = ({t}) => {
+  if(!t) return null;
+  return (
+    <div style={{position:"fixed",bottom:90,left:"50%",transform:"translateX(-50%)",background:t.e?"#ef4444":"#1a56db",color:"#fff",borderRadius:20,padding:"11px 22px",fontSize:13,fontWeight:600,zIndex:9999,boxShadow:"0 8px 24px rgba(0,0,0,0.2)",whiteSpace:"nowrap",pointerEvents:"none"}}>
+      {t.e?"⚠️":"✅"} {t.m}
+    </div>
+  );
+};
+
+const inp = {width:"100%",border:"1.5px solid #e2e8f0",borderRadius:12,padding:"11px 13px",fontSize:13,outline:"none",boxSizing:"border-box",background:"#fff",fontFamily:"'DM Sans',sans-serif",color:"#1e293b",marginTop:6};
+
+// ─── APP ──────────────────────────────────────────────────────────
+function App() {
+  const [lista, setLista]       = useState([]);
+  const [tela, setTela]         = useState("home");
+  const [sel, setSel]           = useState(null);
+  const [busca, setBusca]       = useState("");
+  const [catF, setCatF]         = useState(null);
+  const [form, setForm]         = useState({titulo:"",categoria:"",icone:"🩺",protocolo:"",nova:true});
+  const [catNova, setCatNova]   = useState("");
+  const [delModal, setDelModal] = useState(false);
+  const [preview, setPreview]   = useState(false);
+  const [toast, setToast]       = useState(null);
+  const taRef  = useRef(null);
+  const impRef = useRef(null);
+
+  // storage
+  useEffect(()=>{
+    try {
+      const raw = localStorage.getItem(KEY);
+      setLista(raw ? JSON.parse(raw) : SEED);
+      if(!raw) localStorage.setItem(KEY, JSON.stringify(SEED));
+    } catch { setLista(SEED); }
+  },[]);
+
+  const salvarLista = d => { setLista(d); localStorage.setItem(KEY, JSON.stringify(d)); };
+  const msg = (m,e=false) => { setToast({m,e}); setTimeout(()=>setToast(null),2800); };
+
+  // CRUD
+  const salvar = () => {
+    if(!form.titulo.trim()||!form.categoria.trim()){ msg("Preencha título e categoria",true); return; }
+    let novas;
+    if(form.nova){
+      const n = {id:uid(),titulo:form.titulo,categoria:form.categoria,icone:form.icone,protocolo:form.protocolo};
+      novas = [...lista, n];
+      salvarLista(novas);
+      setSel(n);
+    } else {
+      novas = lista.map(s=>s.id===sel.id?{...s,...form}:s);
+      salvarLista(novas);
+      setSel({...sel,...form});
+    }
+    msg(form.nova?"Situação criada!":"Protocolo salvo!");
+    setTela("protocolo");
+  };
+
+  const excluir = () => {
+    salvarLista(lista.filter(s=>s.id!==sel.id));
+    setDelModal(false); setSel(null);
+    setTela("lista"); msg("Situação removida");
+  };
+
+  const abrirNova = () => {
+    setSel(null);
+    setForm({titulo:"",categoria:"",icone:"🩺",protocolo:"",nova:true});
+    setCatNova(""); setPreview(false); setTela("editor");
+  };
+
+  const abrirEditar = s => {
+    setSel(s);
+    setForm({titulo:s.titulo,categoria:s.categoria,icone:s.icone,protocolo:s.protocolo,nova:false});
+    setCatNova(""); setPreview(false); setTela("editor");
+  };
+
+  // toolbar markdown
+  const inserir = tag => {
+    const ta = taRef.current; if(!ta) return;
+    const i=ta.selectionStart, f=ta.selectionEnd;
+    const s=form.protocolo.substring(i,f);
+    const mapa={"## ":`\n## ${s||"Seção"}\n`,"### ":`\n### ${s||"Subseção"}\n`,"- ":`\n- ${s||"item"}`,"&gt; ":`\n> ${s||"Atenção"}`,"**":`**${s||"texto"}**`,"\n":"\n\n"};
+    const novo=mapa[tag]||tag;
+    const atualizado=form.protocolo.substring(0,i)+novo+form.protocolo.substring(f);
+    setForm(p=>({...p,protocolo:atualizado}));
+    setTimeout(()=>{ ta.focus(); ta.selectionStart=ta.selectionEnd=i+novo.length; },10);
+  };
+
+  // exportar
+  const exportar = () => {
+    const blob=new Blob([JSON.stringify(lista,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download="protocolos.json"; a.click();
+    URL.revokeObjectURL(url); msg("protocolos.json baixado!");
+  };
+
+  // importar
+  const importar = e => {
+    const file=e.target.files?.[0]; if(!file) return;
+    const r=new FileReader();
+    r.onload=ev=>{
+      try {
+        const d=JSON.parse(ev.target.result);
+        if(!Array.isArray(d)) throw new Error();
+        salvarLista(d); msg(`${d.length} protocolos importados!`); setTela("lista");
+      } catch { msg("Arquivo inválido",true); }
+    };
+    r.readAsText(file); e.target.value="";
+  };
+
+  const cats = [...new Set(lista.map(s=>s.categoria))];
+  const filtradas = lista.filter(s=>{
+    const mb=s.titulo.toLowerCase().includes(busca.toLowerCase())||s.categoria.toLowerCase().includes(busca.toLowerCase());
+    const mc=!catF||s.categoria===catF;
+    return mb&&mc;
+  });
+
+  // ══ HOME ══════════════════════════════════════════════════════
+  if(tela==="home") return (
+    <div style={{background:GRAD,minHeight:"100vh"}} className="fade-in">
+      <Toast t={toast}/>
+      <div style={{position:"absolute",top:-50,right:-50,width:200,height:200,borderRadius:"50%",background:"rgba(255,255,255,0.04)",pointerEvents:"none"}}/>
+      <div style={{padding:"56px 24px 50px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:28}}>
+          <div style={{background:"rgba(255,255,255,0.13)",borderRadius:14,padding:"10px 12px",fontSize:24}}>🩺</div>
+          <div>
+            <div style={{color:"rgba(255,255,255,0.55)",fontSize:10,fontWeight:700,letterSpacing:3,textTransform:"uppercase"}}>Assistente Clínico</div>
+            <div style={{color:"#fff",fontSize:13,fontWeight:600}}>Para Enfermeiros</div>
+          </div>
+        </div>
+        <h1 style={{color:"#fff",fontSize:32,fontWeight:800,lineHeight:1.1,margin:"0 0 10px"}}>Protocolos<br/><span style={{color:"#93c5fd"}}>Clínicos</span></h1>
+        <p style={{color:"rgba(255,255,255,0.6)",fontSize:13,marginTop:0,marginBottom:28,lineHeight:1.6}}>Seus protocolos, sempre atualizados. Consulte, adicione e sincronize.</p>
+
+        <div style={{display:"flex",gap:10,marginBottom:28}}>
+          {[{n:lista.length,l:"Situações"},{n:cats.length,l:"Categorias"},{n:"↑",l:"Sync"}].map((s,i)=>(
+            <div key={i} style={{flex:1,background:"rgba(255,255,255,0.1)",borderRadius:16,padding:"14px 8px",textAlign:"center"}}>
+              <div style={{color:"#fff",fontSize:22,fontWeight:800}}>{s.n}</div>
+              <div style={{color:"rgba(255,255,255,0.55)",fontSize:10,fontWeight:500}}>{s.l}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          <button onClick={()=>setTela("lista")} style={{background:"#fff",color:"#1a56db",border:"none",borderRadius:16,padding:"16px 20px",fontSize:15,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:10,boxShadow:"0 8px 24px rgba(0,0,0,0.18)"}}>
+            <span style={{fontSize:20}}>📂</span> Ver Todos os Protocolos
+          </button>
+          <button onClick={abrirNova} style={{background:"rgba(255,255,255,0.12)",color:"#fff",border:"1.5px solid rgba(255,255,255,0.2)",borderRadius:16,padding:"14px 20px",fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:18}}>＋</span> Nova Situação / Protocolo
+          </button>
+          <button onClick={()=>setTela("sync")} style={{background:"rgba(255,255,255,0.08)",color:"rgba(255,255,255,0.85)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:16,padding:"14px 20px",fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:18}}>🔄</span> Exportar / Importar (GitHub Sync)
+          </button>
+        </div>
+
+        {lista.length>0&&(
+          <div style={{marginTop:30}}>
+            <div style={{color:"rgba(255,255,255,0.45)",fontSize:10,fontWeight:700,letterSpacing:3,textTransform:"uppercase",marginBottom:12}}>Acesso Rápido</div>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {lista.slice(0,4).map(s=>(
+                <button key={s.id} onClick={()=>{setSel(s);setTela("protocolo");}} style={{background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:14,padding:"13px 14px",cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
+                  <span style={{fontSize:20}}>{s.icone}</span>
+                  <div style={{textAlign:"left",flex:1}}>
+                    <div style={{color:"#fff",fontSize:13,fontWeight:600}}>{s.titulo}</div>
+                    <div style={{color:"rgba(255,255,255,0.4)",fontSize:11}}>{s.categoria}</div>
+                  </div>
+                  <span style={{color:"rgba(255,255,255,0.25)",fontSize:20}}>›</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // ══ LISTA ══════════════════════════════════════════════════════
+  if(tela==="lista") return (
+    <div style={{background:"#f0f4f8",minHeight:"100vh"}} className="fade-in">
+      <Toast t={toast}/>
+      <div style={{background:GRAD,padding:"48px 16px 16px",position:"sticky",top:0,zIndex:20}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+          <Voltar onClick={()=>setTela("home")}/>
+          <h2 style={{color:"#fff",fontSize:18,fontWeight:700,margin:0,flex:1}}>Protocolos Clínicos</h2>
+          <button onClick={abrirNova} style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:10,padding:"8px 12px",cursor:"pointer",color:"#fff",fontSize:18}}>＋</button>
+        </div>
+        <div style={{background:"rgba(255,255,255,0.12)",borderRadius:12,padding:"10px 14px",display:"flex",gap:8,marginBottom:12}}>
+          <span>🔍</span>
+          <input value={busca} onChange={e=>setBusca(e.target.value)} placeholder="Buscar situação ou categoria..." style={{flex:1,background:"transparent",border:"none",outline:"none",color:"#fff",fontSize:13}}/>
+          {busca&&<button onClick={()=>setBusca("")} style={{background:"none",border:"none",color:"rgba(255,255,255,0.6)",cursor:"pointer",fontSize:18}}>×</button>}
+        </div>
+        <div style={{display:"flex",gap:7,overflowX:"auto",paddingBottom:4}}>
+          <Chip ativo={!catF} onClick={()=>setCatF(null)}>Todos</Chip>
+          {cats.map(c=><Chip key={c} ativo={catF===c} onClick={()=>setCatF(catF===c?null:c)}>{c}</Chip>)}
+        </div>
+      </div>
+
+      <div style={{padding:"14px 14px 90px"}}>
+        {cats.filter(cat=>!catF||cat===catF).map(cat=>{
+          const itens=filtradas.filter(s=>s.categoria===cat);
+          if(!itens.length) return null;
+          const cor=getCor(cat);
+          return (
+            <div key={cat} style={{marginBottom:22}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                <div style={{width:10,height:10,borderRadius:"50%",background:cor}}/>
+                <span style={{fontSize:10,fontWeight:700,color:"#64748b",letterSpacing:2,textTransform:"uppercase"}}>{cat}</span>
+                <span style={{background:cor+"20",color:cor,fontSize:10,fontWeight:700,borderRadius:20,padding:"1px 7px"}}>{itens.length}</span>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {itens.map(s=>(
+                  <button key={s.id} onClick={()=>{setSel(s);setTela("protocolo");}} style={{background:"#fff",border:`1.5px solid ${cor}20`,borderLeft:`4px solid ${cor}`,borderRadius:16,padding:"14px",cursor:"pointer",display:"flex",alignItems:"center",gap:12,textAlign:"left",boxShadow:"0 2px 6px rgba(0,0,0,0.05)"}}>
+                    <div style={{background:getBg(s.categoria),borderRadius:12,width:44,height:44,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{s.icone}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:13,fontWeight:600,color:"#1e293b",lineHeight:1.3}}>{s.titulo}</div>
+                      <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>{s.protocolo?s.protocolo.replace(/[#\-*>\n]/g," ").trim().substring(0,55)+"…":"Sem protocolo ainda"}</div>
+                    </div>
+                    <span style={{color:"#cbd5e1",fontSize:20,flexShrink:0}}>›</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+        {filtradas.length===0&&(
+          <div style={{textAlign:"center",padding:"60px 20px",color:"#94a3b8"}}>
+            <div style={{fontSize:40,marginBottom:10}}>🔍</div>
+            <div style={{fontSize:14,fontWeight:600}}>Nenhuma situação encontrada</div>
+            <button onClick={abrirNova} style={{marginTop:16,background:"#1a56db",color:"#fff",border:"none",borderRadius:12,padding:"10px 20px",fontSize:13,fontWeight:600,cursor:"pointer"}}>+ Criar nova situação</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // ══ PROTOCOLO ══════════════════════════════════════════════════
+  if(tela==="protocolo"&&sel) {
+    const cor=getCor(sel.categoria);
+    return (
+      <div style={{background:"#f8fafc",minHeight:"100vh"}} className="fade-in">
+        <Toast t={toast}/>
+        <div style={{background:GRAD,padding:"48px 16px 18px",position:"sticky",top:0,zIndex:20}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <Voltar onClick={()=>setTela("lista")}/>
+            <div style={{flex:1}}>
+              <div style={{color:"rgba(255,255,255,0.5)",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:2}}>{sel.categoria}</div>
+              <div style={{color:"#fff",fontSize:14,fontWeight:700,lineHeight:1.2}}>{sel.titulo}</div>
+            </div>
+            <div style={{background:"rgba(255,255,255,0.13)",borderRadius:12,width:40,height:40,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>{sel.icone}</div>
+          </div>
+          <div style={{display:"flex",gap:8,marginTop:14}}>
+            <button onClick={()=>abrirEditar(sel)} style={{flex:1,background:"#fff",border:"none",borderRadius:12,padding:"9px",fontSize:12,fontWeight:700,color:"#1a56db",cursor:"pointer"}}>✏️ Editar Protocolo</button>
+            <button onClick={()=>setDelModal(true)} style={{background:"rgba(239,68,68,0.2)",border:"none",borderRadius:12,padding:"9px 14px",fontSize:14,cursor:"pointer"}}>🗑️</button>
+          </div>
+        </div>
+
+        <div style={{padding:"18px 14px 90px"}}>
+          {sel.protocolo
+            ? <div style={{background:"#fff",borderRadius:20,padding:"20px 18px",boxShadow:"0 4px 16px rgba(0,0,0,0.06)",fontSize:13,lineHeight:1.75,color:"#334155"}} dangerouslySetInnerHTML={{__html:renderMd(sel.protocolo)}}/>
+            : <div style={{textAlign:"center",padding:"60px 20px",color:"#94a3b8"}}>
+                <div style={{fontSize:40,marginBottom:12}}>📝</div>
+                <div style={{fontSize:14,fontWeight:600,color:"#64748b"}}>Nenhum protocolo cadastrado</div>
+              </div>
+          }
+          {sel.protocolo&&(
+            <div style={{marginTop:14,background:"#eff6ff",borderRadius:12,padding:"11px 14px",display:"flex",gap:8}}>
+              <span>📌</span>
+              <div style={{fontSize:11,color:"#1e40af",lineHeight:1.5}}>Confirme sempre com os protocolos locais vigentes.</div>
+            </div>
+          )}
+        </div>
+
+        {delModal&&(
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:100}}>
+            <div style={{background:"#fff",borderRadius:"24px 24px 0 0",padding:"28px 24px 40px",width:"100%",maxWidth:430}}>
+              <div style={{fontSize:36,textAlign:"center",marginBottom:12}}>🗑️</div>
+              <div style={{textAlign:"center",fontWeight:700,fontSize:16,color:"#1e293b",marginBottom:6}}>Excluir situação?</div>
+              <div style={{textAlign:"center",fontSize:13,color:"#64748b",marginBottom:24}}>"{sel.titulo}" será removida permanentemente.</div>
+              <div style={{display:"flex",gap:10}}>
+                <button onClick={()=>setDelModal(false)} style={{flex:1,background:"#f1f5f9",border:"none",borderRadius:14,padding:"14px",fontSize:14,fontWeight:600,color:"#64748b",cursor:"pointer"}}>Cancelar</button>
+                <button onClick={excluir} style={{flex:1,background:"#ef4444",border:"none",borderRadius:14,padding:"14px",fontSize:14,fontWeight:700,color:"#fff",cursor:"pointer"}}>Excluir</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ══ EDITOR ════════════════════════════════════════════════════
+  if(tela==="editor") return (
+    <div style={{background:"#f0f4f8",minHeight:"100vh"}} className="fade-in">
+      <Toast t={toast}/>
+      <div style={{background:GRAD,padding:"48px 16px 18px",position:"sticky",top:0,zIndex:20}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <Voltar onClick={()=>setTela(form.nova?"lista":"protocolo")}/>
+          <div style={{flex:1}}>
+            <div style={{color:"rgba(255,255,255,0.5)",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:2}}>{form.nova?"Nova Situação":"Editar"}</div>
+            <div style={{color:"#fff",fontSize:14,fontWeight:700}}>{form.nova?"Adicionar protocolo":sel?.titulo}</div>
+          </div>
+          <button onClick={salvar} style={{background:"#fff",border:"none",borderRadius:12,padding:"9px 16px",fontSize:13,fontWeight:700,color:"#1a56db",cursor:"pointer"}}>💾 Salvar</button>
+        </div>
+      </div>
+
+      <div style={{padding:"16px 14px 100px",display:"flex",flexDirection:"column",gap:14}}>
+        {/* Ícone */}
+        <div style={{background:"#fff",borderRadius:18,padding:"16px"}}>
+          <Label>Ícone</Label>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:10}}>
+            {ICONES.map(ic=>(
+              <button key={ic} onClick={()=>setForm(f=>({...f,icone:ic}))} style={{width:40,height:40,fontSize:20,borderRadius:10,border:form.icone===ic?"2.5px solid #1a56db":"1.5px solid #e2e8f0",background:form.icone===ic?"#eff6ff":"#f8fafc",cursor:"pointer"}}>{ic}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Título e Categoria */}
+        <div style={{background:"#fff",borderRadius:18,padding:"16px",display:"flex",flexDirection:"column",gap:14}}>
+          <div>
+            <Label>Título *</Label>
+            <input value={form.titulo} onChange={e=>setForm(f=>({...f,titulo:e.target.value}))} placeholder="Ex: Abertura de Pré-natal" style={inp}/>
+          </div>
+          <div>
+            <Label>Categoria *</Label>
+            <input value={catNova||form.categoria} onChange={e=>{setCatNova(e.target.value);setForm(f=>({...f,categoria:e.target.value}));}} placeholder="Ex: Pré-natal, Urgência..." style={inp} list="cats"/>
+            <datalist id="cats">{cats.map(c=><option key={c} value={c}/>)}</datalist>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:8}}>
+              {cats.map(c=>(
+                <button key={c} onClick={()=>{setForm(f=>({...f,categoria:c}));setCatNova("");}} style={{background:form.categoria===c?"#1a56db":"#f1f5f9",color:form.categoria===c?"#fff":"#475569",border:"none",borderRadius:20,padding:"5px 12px",fontSize:11,fontWeight:600,cursor:"pointer"}}>{c}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Editor */}
+        <div style={{background:"#fff",borderRadius:18,padding:"16px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+            <Label>Conteúdo do Protocolo</Label>
+            <button onClick={()=>setPreview(p=>!p)} style={{background:preview?"#1a56db":"#f1f5f9",color:preview?"#fff":"#475569",border:"none",borderRadius:10,padding:"5px 12px",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+              {preview?"✏️ Editar":"👁 Preview"}
+            </button>
+          </div>
+          <div style={{fontSize:11,color:"#94a3b8",marginBottom:10}}>## Seção &nbsp;|&nbsp; ### Sub &nbsp;|&nbsp; - item &nbsp;|&nbsp; &gt; alerta &nbsp;|&nbsp; **negrito**</div>
+
+          {!preview&&(
+            <>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
+                {[["## Seção","## "],["### Sub","### "],["- Item","- "],["> Alerta","&gt; "],["**Bold**","**"],["¶","\n"]].map(([l,t])=>(
+                  <button key={l} onClick={()=>inserir(t)} style={{background:"#f1f5f9",border:"none",borderRadius:8,padding:"5px 10px",fontSize:11,fontWeight:600,color:"#475569",cursor:"pointer",fontFamily:"monospace"}}>{l}</button>
+                ))}
+              </div>
+              <textarea ref={taRef} value={form.protocolo} onChange={e=>setForm(f=>({...f,protocolo:e.target.value}))}
+                placeholder={"## Título\n\n### 1. Anamnese\n- Item\n\n> Atenção: alerta"}
+                rows={16} style={{...inp,fontFamily:"monospace",fontSize:12,lineHeight:1.6,minHeight:260,background:"#f8fafc"}}/>
+            </>
+          )}
+
+          {preview&&(
+            <div style={{fontSize:13,lineHeight:1.75,color:"#334155",background:"#f8fafc",borderRadius:12,padding:"16px",minHeight:200}}
+              dangerouslySetInnerHTML={{__html:renderMd(form.protocolo)||'<span style="color:#94a3b8">Nenhum conteúdo ainda.</span>'}}/>
+          )}
+        </div>
+
+        <button onClick={salvar} style={{background:"#1a56db",color:"#fff",border:"none",borderRadius:18,padding:"17px",fontSize:15,fontWeight:700,cursor:"pointer"}}>
+          {form.nova?"✅ Criar Situação":"💾 Salvar Alterações"}
+        </button>
+      </div>
+    </div>
+  );
+
+  // ══ SYNC ══════════════════════════════════════════════════════
+  if(tela==="sync") return (
+    <div style={{background:"#f0f4f8",minHeight:"100vh"}} className="fade-in">
+      <Toast t={toast}/>
+      <input type="file" accept=".json" ref={impRef} onChange={importar} style={{display:"none"}}/>
+
+      <div style={{background:GRAD,padding:"48px 16px 20px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <Voltar onClick={()=>setTela("home")}/>
+          <div>
+            <div style={{color:"rgba(255,255,255,0.5)",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:2}}>Sincronização</div>
+            <div style={{color:"#fff",fontSize:16,fontWeight:700}}>GitHub Sync</div>
+          </div>
+          <div style={{marginLeft:"auto",fontSize:28}}>🔄</div>
+        </div>
+      </div>
+
+      <div style={{padding:"20px 14px 80px",display:"flex",flexDirection:"column",gap:16}}>
+        <div style={{background:"#eff6ff",borderRadius:16,padding:"16px",border:"1px solid #bfdbfe"}}>
+          <div style={{fontSize:13,fontWeight:700,color:"#1e40af",marginBottom:8}}>📖 Como sincronizar?</div>
+          <div style={{fontSize:12,color:"#1e40af",lineHeight:1.8}}>
+            1. Edite os protocolos aqui no app<br/>
+            2. Toque em <strong>"Baixar protocolos.json"</strong><br/>
+            3. No GitHub, abra <code>protocolos.json</code> → lápis → <em>Upload file</em><br/>
+            4. Faça o commit — o app já carrega os dados atualizados ✅
+          </div>
+        </div>
+
+        <div style={{background:"#fff",borderRadius:16,padding:"16px",boxShadow:"0 2px 8px rgba(0,0,0,0.05)"}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:2,marginBottom:12}}>Dados locais</div>
+          <div style={{display:"flex",gap:12}}>
+            {[{n:lista.length,l:"situações"},{n:cats.length,l:"categorias"},{n:Math.round(JSON.stringify(lista).length/1024)+"kb",l:"tamanho"}].map((s,i)=>(
+              <div key={i} style={{flex:1,background:"#f8fafc",borderRadius:12,padding:"12px",textAlign:"center"}}>
+                <div style={{fontSize:22,fontWeight:800,color:"#1a56db"}}>{s.n}</div>
+                <div style={{fontSize:11,color:"#94a3b8"}}>{s.l}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{background:"#fff",borderRadius:16,padding:"18px",boxShadow:"0 2px 8px rgba(0,0,0,0.05)"}}>
+          <div style={{fontSize:14,fontWeight:700,color:"#1e293b",marginBottom:6}}>⬇️ Exportar para GitHub</div>
+          <div style={{fontSize:12,color:"#94a3b8",marginBottom:12}}>Baixa o arquivo com todos os seus protocolos atuais.</div>
+          <button onClick={exportar} style={{width:"100%",background:"#1a56db",color:"#fff",border:"none",borderRadius:14,padding:"14px",fontSize:14,fontWeight:700,cursor:"pointer"}}>⬇️ Baixar protocolos.json</button>
+        </div>
+
+        <div style={{background:"#fff",borderRadius:16,padding:"18px",boxShadow:"0 2px 8px rgba(0,0,0,0.05)"}}>
+          <div style={{fontSize:14,fontWeight:700,color:"#1e293b",marginBottom:6}}>⬆️ Importar / Restaurar backup</div>
+          <div style={{fontSize:12,color:"#94a3b8",marginBottom:12}}>⚠️ Substitui todos os dados locais.</div>
+          <button onClick={()=>impRef.current?.click()} style={{width:"100%",background:"#fff7ed",color:"#c2410c",border:"1.5px solid #fed7aa",borderRadius:14,padding:"14px",fontSize:14,fontWeight:700,cursor:"pointer"}}>⬆️ Carregar protocolos.json</button>
+        </div>
+
+        <div style={{background:"#fff",borderRadius:16,padding:"18px",boxShadow:"0 2px 8px rgba(0,0,0,0.05)",border:"1px solid #fee2e2"}}>
+          <div style={{fontSize:13,fontWeight:700,color:"#991b1b",marginBottom:8}}>🔁 Restaurar dados originais</div>
+          <div style={{fontSize:12,color:"#94a3b8",marginBottom:12}}>Apaga tudo e volta para os protocolos de exemplo.</div>
+          <button onClick={()=>{ if(window.confirm("Tem certeza? Todos os dados serão apagados.")){ salvarLista(SEED); msg("Dados restaurados!"); }}} style={{background:"#fff",color:"#ef4444",border:"1.5px solid #fca5a5",borderRadius:14,padding:"12px 20px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+            🗑️ Restaurar dados originais
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return null;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+
+<script>
+// Service Worker para PWA offline
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
